@@ -11,6 +11,10 @@ on:
 jobs:
   buildx:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,13 +40,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Set platform short
+        run: echo "PLATFORM_SHORT=$(echo ${{ matrix.platform }} | sed 's|linux/||')" >> $GITHUB_ENV
+
       - name: Build
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=tar,dest=./filecodebox-${{ env.PLATFORM_SHORT }}.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filecodebox-${{ env.PLATFORM_SHORT }}.tar
+          path: ./filecodebox-${{ env.PLATFORM_SHORT }}.tar

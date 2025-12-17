@@ -215,13 +215,41 @@ volumes:
 
 ### 配置反向代理（Nginx示例）
 
-请注意，必须添加以下配置来确保正确处理客户端IP和代理请求：
+#### 部署在根路径
 
 ```nginx
 location / {
+    proxy_pass http://localhost:12345;
+    proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;      # 设置真实客户端IP
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_pass http://localhost:12345; 
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+#### 部署在子路径
+
+如果需要部署在子路径（如 `https://example.com/filebox/`），需要设置 `BASE_PATH` 环境变量：
+
+```bash
+# Docker 部署
+docker run -d --restart=always \
+  -e BASE_PATH="/filebox" \
+  -p 12345:12345 \
+  -v /opt/FileCodeBox/:/app/data \
+  --name filecodebox \
+  lanol/filecodebox:beta
+```
+
+对应的 Nginx 配置：
+
+```nginx
+location /filebox/ {
+    proxy_pass http://localhost:12345/filebox/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
 

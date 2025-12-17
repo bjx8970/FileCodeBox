@@ -20,5 +20,8 @@ RUN pip install -r requirements.txt
 # 暴露端口
 EXPOSE 12345
 
+# 设置环境变量（可选）
+# ENV BASE_PATH=""
+
 # 启动应用
 CMD ["python", "main.py"]

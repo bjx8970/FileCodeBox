@@ -24,6 +24,16 @@ FileCodeBox 支持两种配置方式：
 | `keywords` | string | `FileCodeBox, 文件快递柜...` | 站点关键词，用于 SEO |
 | `port` | int | `12345` | 服务监听端口 |
 
+### 环境变量
+
+| 环境变量 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `BASE_PATH` | string | `""` | 反向代理子路径，用于部署在子路径下（如 `/filebox`） |
+
+::: tip 反向代理配置
+如果需要将 FileCodeBox 部署在 Nginx 反向代理的子路径下（如 `https://example.com/filebox/`），请设置 `BASE_PATH` 环境变量。详见下方反向代理配置示例。
+:::
+
 ### 通知设置
 
 | 配置项 | 类型 | 默认值 | 说明 |
@@ -197,6 +207,84 @@ FileCodeBox 支持两种配置方式：
     "admin_token": "enterprise-secure-token",
     "showAdminAddr": 1
 }
+```
+
+## 反向代理配置
+
+### Nginx 配置
+
+#### 部署在根路径
+
+如果将 FileCodeBox 部署在根路径（如 `https://example.com/`），使用以下配置：
+
+```nginx
+location / {
+    proxy_pass http://localhost:12345;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+#### 部署在子路径
+
+如果需要将 FileCodeBox 部署在子路径（如 `https://example.com/filebox/`），需要配置环境变量和 Nginx：
+
+**1. 启动 FileCodeBox 时设置环境变量：**
+
+```bash
+# 使用 Docker
+docker run -d \
+  -e BASE_PATH="/filebox" \
+  -p 12345:12345 \
+  -v /opt/FileCodeBox/:/app/data \
+  --name filecodebox \
+  lanol/filecodebox:latest
+
+# 或手动运行
+export BASE_PATH="/filebox"
+python main.py
+```
+
+**2. 配置 Nginx：**
+
+```nginx
+location /filebox/ {
+    proxy_pass http://localhost:12345/filebox/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+::: warning 注意
+- `BASE_PATH` 必须以 `/` 开头，如 `/filebox`
+- Nginx 配置中的路径必须与 `BASE_PATH` 一致
+- `proxy_pass` 中的 URL 必须包含子路径（如 `http://localhost:12345/filebox/`）
+:::
+
+### Docker Compose 配置
+
+在 `docker-compose.yml` 中配置子路径：
+
+```yaml
+version: "3"
+services:
+  file-code-box:
+    image: lanol/filecodebox:latest
+    environment:
+      - BASE_PATH=/filebox
+    volumes:
+      - fcb-data:/app/data:rw
+    restart: unless-stopped
+    ports:
+      - "12345:12345"
+
+volumes:
+  fcb-data:
+    external: false
 ```
 
 ## 下一步

@@ -211,13 +211,41 @@ volumes:
 
 ### Configure reverse proxy (Nginx example)
 
-Please note that the following configurations must be added to ensure proper handling of client IP and proxy requests:
+#### Deploy at Root Path
 
 ```nginx
 location / {
-proxy_set_header X-Real-IP $remote_addr; #Set real client IP
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-proxy_pass  http://localhost:12345 ; 
+    proxy_pass http://localhost:12345;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;      # Set real client IP
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+#### Deploy at Sub-path
+
+If you need to deploy under a sub-path (e.g., `https://example.com/filebox/`), you need to set the `BASE_PATH` environment variable:
+
+```bash
+# Docker deployment
+docker run -d --restart=always \
+  -e BASE_PATH="/filebox" \
+  -p 12345:12345 \
+  -v /opt/FileCodeBox/:/app/data \
+  --name filecodebox \
+  lanol/filecodebox:beta
+```
+
+Corresponding Nginx configuration:
+
+```nginx
+location /filebox/ {
+    proxy_pass http://localhost:12345/filebox/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
 

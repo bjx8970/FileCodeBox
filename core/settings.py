@@ -2,6 +2,7 @@
 # @Author  : Lan
 # @File    : settings.py
 # @Software: PyCharm
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -9,6 +10,15 @@ data_root = BASE_DIR / "data"
 
 if not data_root.exists():
     data_root.mkdir(parents=True, exist_ok=True)
+
+# Get base path from environment variable, ensure it starts and ends with /
+BASE_PATH = os.getenv("BASE_PATH", "").strip()
+if BASE_PATH and not BASE_PATH.startswith("/"):
+    BASE_PATH = "/" + BASE_PATH
+if BASE_PATH and not BASE_PATH.endswith("/"):
+    BASE_PATH = BASE_PATH + "/"
+if not BASE_PATH:
+    BASE_PATH = "/"
 
 DEFAULT_CONFIG = {
     "file_storage": "local",

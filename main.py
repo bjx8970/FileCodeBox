@@ -18,7 +18,7 @@ from apps.base.views import share_api, chunk_api
 from apps.admin.views import admin_api
 from core.database import init_db
 from core.response import APIResponse
-from core.settings import data_root, settings, BASE_DIR, DEFAULT_CONFIG
+from core.settings import data_root, settings, BASE_DIR, DEFAULT_CONFIG, BASE_PATH
 from core.tasks import delete_expire_files, clean_incomplete_uploads
 from core.logger import logger
 
@@ -34,8 +34,11 @@ async def lifespan(app: FastAPI):
 
     # 加载配置
     await load_config()
+    
+    # Mount static files with base path support
+    assets_path = f"{BASE_PATH.rstrip('/')}/assets" if BASE_PATH != "/" else "/assets"
     app.mount(
-        "/assets",
+        assets_path,
         StaticFiles(directory=f"./{settings.themesSelect}/assets"),
         name="assets",
     )
@@ -72,7 +75,10 @@ async def load_config():
     ip_limit["upload"].count = settings.uploadCount
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    root_path=BASE_PATH.rstrip('/') if BASE_PATH != "/" else ""
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -106,6 +112,9 @@ app.include_router(admin_api)
 @app.exception_handler(404)
 @app.get("/")
 async def index(request=None, exc=None):
+    # Prepare the asset path based on BASE_PATH
+    assets_prefix = f"{BASE_PATH.rstrip('/')}/assets" if BASE_PATH != "/" else "/assets"
+    
     return HTMLResponse(
         content=open(
             BASE_DIR / f"{settings.themesSelect}/index.html", "r", encoding="utf-8"
@@ -115,7 +124,9 @@ async def index(request=None, exc=None):
         .replace("{{description}}", str(settings.description))
         .replace("{{keywords}}", str(settings.keywords))
         .replace("{{opacity}}", str(settings.opacity))
-        .replace('"/assets/', '"assets/')
+        .replace('"/assets/', f'"{assets_prefix}/')
+        .replace("'/assets/", f"'{assets_prefix}/")
+        .replace('href="/assets/', f'href="{assets_prefix}/')
         .replace("{{background}}", str(settings.background)),
         media_type="text/html",
         headers={"Cache-Control": "no-cache"},

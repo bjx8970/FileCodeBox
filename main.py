@@ -18,7 +18,7 @@ from apps.base.views import share_api, chunk_api
 from apps.admin.views import admin_api
 from core.database import init_db
 from core.response import APIResponse
-from core.settings import data_root, settings, BASE_DIR, DEFAULT_CONFIG, BASE_PATH
+from core.settings import data_root, settings, BASE_DIR, DEFAULT_CONFIG, BASE_PATH, get_assets_path
 from core.tasks import delete_expire_files, clean_incomplete_uploads
 from core.logger import logger
 
@@ -36,9 +36,8 @@ async def lifespan(app: FastAPI):
     await load_config()
     
     # Mount static files with base path support
-    assets_path = f"{BASE_PATH.rstrip('/')}/assets" if BASE_PATH != "/" else "/assets"
     app.mount(
-        assets_path,
+        get_assets_path(),
         StaticFiles(directory=f"./{settings.themesSelect}/assets"),
         name="assets",
     )
@@ -112,8 +111,8 @@ app.include_router(admin_api)
 @app.exception_handler(404)
 @app.get("/")
 async def index(request=None, exc=None):
-    # Prepare the asset path based on BASE_PATH
-    assets_prefix = f"{BASE_PATH.rstrip('/')}/assets" if BASE_PATH != "/" else "/assets"
+    # Get the asset path based on BASE_PATH
+    assets_prefix = get_assets_path()
     
     return HTMLResponse(
         content=open(

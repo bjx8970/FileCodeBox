@@ -11,14 +11,34 @@ data_root = BASE_DIR / "data"
 if not data_root.exists():
     data_root.mkdir(parents=True, exist_ok=True)
 
-# Get base path from environment variable, ensure it starts and ends with /
-BASE_PATH = os.getenv("BASE_PATH", "").strip()
-if BASE_PATH and not BASE_PATH.startswith("/"):
-    BASE_PATH = "/" + BASE_PATH
-if BASE_PATH and not BASE_PATH.endswith("/"):
-    BASE_PATH = BASE_PATH + "/"
-if not BASE_PATH:
-    BASE_PATH = "/"
+
+def normalize_base_path(path: str) -> str:
+    """
+    Normalize BASE_PATH to ensure it follows the correct format:
+    - Empty string or "/" for root path
+    - Starts with "/" and ends with "/" for sub-paths
+    """
+    if not path:
+        return "/"
+    path = path.strip()
+    if not path.startswith("/"):
+        path = "/" + path
+    if not path.endswith("/"):
+        path = path + "/"
+    return path
+
+
+# Get base path from environment variable
+BASE_PATH = normalize_base_path(os.getenv("BASE_PATH", ""))
+
+
+def get_assets_path() -> str:
+    """
+    Get the full path for assets based on BASE_PATH.
+    Returns "/assets" for root deployment, or "/subpath/assets" for sub-path deployment.
+    """
+    return f"{BASE_PATH.rstrip('/')}/assets" if BASE_PATH != "/" else "/assets"
+
 
 DEFAULT_CONFIG = {
     "file_storage": "local",
